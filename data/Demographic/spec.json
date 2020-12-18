@@ -1,0 +1,428 @@
+{
+  "schema": {
+    "PUMA": [
+      {
+        "bin_name": "Allegany & Garrett Counties--Cumberland City PUMA",
+        "value": "00100"
+      },
+      {
+        "bin_name": "Washington County--Hagerstown City PUMA",
+        "value": "00200"
+      },
+      {
+        "bin_name": "Frederick County (Outside Greater Frederick City) PUMA",
+        "value": "00301"
+      },
+      {
+        "bin_name": "Frederick County (Central)--Greater Frederick City PUMA",
+        "value": "00302"
+      },
+      {
+        "bin_name": "Carroll County PUMA",
+        "value": "00400"
+      },
+      {
+        "bin_name": "Baltimore County (Outer) PUMA",
+        "value": "00501"
+      },
+      {
+        "bin_name": "Baltimore County--Randallstown (East), Owings Mills, Milford Mill & Reisterstown PUMA",
+        "value": "00502"
+      },
+      {
+        "bin_name": "Baltimore County--Pikesville (South), Lochearn, Cockeysville & Mays Chapel PUMA",
+        "value": "00503"
+      },
+      {
+        "bin_name": "Baltimore County--Towson (East & Central), Parkville & Carney PUMA",
+        "value": "00504"
+      },
+      {
+        "bin_name": "Baltimore County--Perry Hall, Middle River & Rosedale PUMA",
+        "value": "00505"
+      },
+      {
+        "bin_name": "Baltimore County--Dundalk, Essex & Edgemere PUMA",
+        "value": "00506"
+      },
+      {
+        "bin_name": "Baltimore County--Catonsville, Woodlawn & Arbutus PUMA",
+        "value": "00507"
+      },
+      {
+        "bin_name": "Harford County (North & West)--Bel Air Town, Fallston & Jarrettsville PUMA",
+        "value": "00601"
+      },
+      {
+        "bin_name": "Harford County (South & East)--Aberdeen & Havre de Grace Cities PUMA",
+        "value": "00602"
+      },
+      {
+        "bin_name": "Cecil County PUMA",
+        "value": "00700"
+      },
+      {
+        "bin_name": "Baltimore City--Sandtown-Winchester, Ashburton & Mount Washington PUMA",
+        "value": "00801"
+      },
+      {
+        "bin_name": "Baltimore City--Guilford, Roland Park & Druid Lake PUMA",
+        "value": "00802"
+      },
+      {
+        "bin_name": "Baltimore City--Frankford, Belair-Edison & Loch Raven PUMA",
+        "value": "00803"
+      },
+      {
+        "bin_name": "Baltimore City--Inner Harbor, Canton & Bayview PUMA",
+        "value": "00804"
+      },
+      {
+        "bin_name": "Baltimore City--Irvington, Ten Hills & Cherry Hill PUMA",
+        "value": "00805"
+      },
+      {
+        "bin_name": "Howard County (West)--Columbia (West) & Ellicott City (Northwest) PUMA",
+        "value": "00901"
+      },
+      {
+        "bin_name": "Howard County (East)--Columbia (East), Ellicott City (Southeast) & Elkridge PUMA",
+        "value": "00902"
+      },
+      {
+        "bin_name": "Montgomery County (North & West)--Olney, Damascus, Clarksburg & Darnestown PUMA",
+        "value": "01001"
+      },
+      {
+        "bin_name": "Montgomery County (West Central)--Germantown & Montgomery Village PUMA",
+        "value": "01002"
+      },
+      {
+        "bin_name": "Montgomery County (Central)--Rockville, Gaithersburg Cities & North Potomac PUMA",
+        "value": "01003"
+      },
+      {
+        "bin_name": "Montgomery County (South)--Bethesda, Potomac & North Bethesda PUMA",
+        "value": "01004"
+      },
+      {
+        "bin_name": "Montgomery County (East Central)--Wheaton, Aspen Hill & Glenmont PUMA",
+        "value": "01005"
+      },
+      {
+        "bin_name": "Montgomery County (East)--Fairland, Calverton, White Oak & Burtonsville PUMA",
+        "value": "01006"
+      },
+      {
+        "bin_name": "Montgomery County (Southeast)--Takoma Park City & Silver Spring PUMA",
+        "value": "01007"
+      },
+      {
+        "bin_name": "Prince George's County (Northwest)--College Park City & Langley Park PUMA",
+        "value": "01101"
+      },
+      {
+        "bin_name": "Prince George's County (North)--Laurel, Greenbelt (North & East) Cities & Beltsville PUMA",
+        "value": "01102"
+      },
+      {
+        "bin_name": "Prince George's County (Northwest)--New Carrollton & Hyattsville (Southeast) Cities PUMA",
+        "value": "01103"
+      },
+      {
+        "bin_name": "Prince George's County (Central)--Seat Pleasant City, Capitol Heights Town & Landover PUMA",
+        "value": "01104"
+      },
+      {
+        "bin_name": "Prince George's County (East)--Bowie City, Kettering, Largo, Mitchellville & Lanham PUMA",
+        "value": "01105"
+      },
+      {
+        "bin_name": "Prince George's County (South)--Clinton, Fort Washington (South), Rosaryville & Croom PUMA",
+        "value": "01106"
+      },
+      {
+        "bin_name": "Prince George's County (Southwest)--Oxon Hill, Hillcrest Heights & Temple Hills PUMA",
+        "value": "01107"
+      },
+      {
+        "bin_name": "Anne Arundel County (Northwest)--Severn, Odenton, Crofton, Maryland City & Fort Meade PUMA",
+        "value": "01201"
+      },
+      {
+        "bin_name": "Anne Arundel County (North)--Glen Burnie, Pasadena, Ferndale & Brooklyn Park PUMA",
+        "value": "01202"
+      },
+      {
+        "bin_name": "Anne Arundel County (Central)--Severna Park, Arnold & Lake Shore PUMA",
+        "value": "01203"
+      },
+      {
+        "bin_name": "Anne Arundel County (Southeast)--Annapolis City, Parole, Annapolis Neck & Edgewater PUMA",
+        "value": "01204"
+      },
+      {
+        "bin_name": "Queen Anne's, Talbot, Caroline, Dorchester & Kent Counties PUMA",
+        "value": "01300"
+      },
+      {
+        "bin_name": "Wicomico, Worcester & Somerset Counties--Salisbury City PUMA",
+        "value": "01400"
+      },
+      {
+        "bin_name": "St. Mary's & Calvert Counties PUMA",
+        "value": "01500"
+      },
+      {
+        "bin_name": "Charles County--La Plata Town & Waldorf PUMA",
+        "value": "01600"
+      }
+    ],
+    "AGE": [
+      {
+        "bin_name": "Under 1 year",
+        "value": 0
+      },
+      {
+        "bin_name": "1 to 99 years",
+        "min_value": 1,
+        "max_value": 98
+      },
+      {
+        "bin_name": "99 and above",
+        "value": 99
+      }
+    ],
+    "EDUC": [
+      {
+        "bin_name": "N/A or no schooling completed",
+        "value": "0"
+      },
+      {
+        "bin_name": "Nursery school to grade 4",
+        "value": "1"
+      },
+      {
+        "bin_name": "Grade 5, 6, 7, or 8",
+        "value": "2"
+      },
+      {
+        "bin_name": "Grade 9",
+        "value": "3"
+      },
+      {
+        "bin_name": "Grade 10",
+        "value": "4"
+      },
+      {
+        "bin_name": "Grade 11",
+        "value": "5"
+      },
+      {
+        "bin_name": "Grade 12",
+        "value": "6"
+      },
+      {
+        "bin_name": "1 year of college",
+        "value": "7"
+      },
+      {
+        "bin_name": "2 years of college",
+        "value": "8"
+      },
+      {
+        "bin_name": "3 years of college",
+        "value": "9"
+      },
+      {
+        "bin_name": "4 years of college",
+        "value": "10"
+      },
+      {
+        "bin_name": "5+ years of college",
+        "value": "11"
+      }
+    ],
+    "SEX": [
+      {
+        "bin_name": "Male",
+        "value": "1"
+      },
+      {
+        "bin_name": "Female",
+        "value": "2"
+      }
+    ],
+    "INCWAGE": [
+      {
+        "bin_name": "None",
+        "value": 0
+      },
+      {
+        "bin_name": "$1 to 999999",
+        "min_value": 1,
+        "value": 999998
+      },
+      {
+        "bin_name": "TOP-CODE 999999",
+        "value": 999999
+      }
+    ],
+    "HISPAN": [
+      {
+        "bin_name": "Not Spanish/Hispanic/Latino",
+        "value": "0"
+      },
+      {
+        "bin_name": "Mexican",
+        "value": "1"
+      },
+      {
+        "bin_name": "Puerto Rican",
+        "value": "2"
+      },
+      {
+        "bin_name": "Cuban",
+        "value": "3"
+      },
+      {
+        "bin_name": "Other Hispanic",
+        "value": "4"
+      },
+      {
+        "bin_name": "Not Reported",
+        "value": "9"
+      }
+    ],
+    "INCTOT": [
+      {
+        "bin_name": "None",
+        "value": 0
+      },
+      {
+        "bin_name": "Loss of $19999 or more",
+        "value": -19999
+      },
+      {
+        "bin_name": "Loss $1 to $19998 (Rounded components)",
+        "min_value": -19998,
+        "max_value": -1
+      },
+      {
+        "bin_name": "$1 or break even",
+        "value": 1
+      },
+      {
+        "bin_name": "$2 to $1151001",
+        "min_value": 2,
+        "max_value": 1151000
+      },
+      {
+        "bin_name": "TOP-CODE",
+        "min_value": 1151001,
+        "max_value": 9999999
+      }
+    ],
+    "INCEARN": [
+      {
+        "bin_name": "None",
+        "value": 0
+      },
+      {
+        "bin_name": "Loss of $9999 or more",
+        "value": -9999
+      },
+      {
+        "bin_name": "Loss $1 to $9998 (Rounded components)",
+        "min_value": -9998,
+        "max_value": -1
+
+      },
+      {
+        "bin_name": "$1 or break even",
+        "value": 1
+      },
+      {
+        "bin_name": "$2 to $284000",
+        "min_value": 2,
+        "max_value": 284000
+      },
+      {
+        "bin_name": "TOPCODE",
+        "min_value": 284000,
+        "max_value": 999999
+      }
+    ],
+    "POVERTY": [
+      {
+        "bin_name": "N/A",
+        "value": 0
+      },
+      {
+        "bin_name": "1 percent or less of poverty threshold",
+        "value": 1
+      },
+      {
+        "bin_name": "Below 501 percent",
+        "min_value": 2,
+        "max_value": 500
+      },
+      {
+        "bin_name": "501 percent or more",
+        "value": 501
+      }
+    ],
+    "RACE": [
+      {
+        "bin_name": "White alone",
+        "value": "1"
+      },
+      {
+        "bin_name": "Black or African American",
+        "value": "2"
+      },
+      {
+        "bin_name": "American Indian or Alaska Native",
+         "value": "3"
+      },
+      {
+        "bin_name": "Chinese",
+         "value": "4"
+      },
+      {
+        "bin_name": "Japanese",
+         "value": "5"
+      },
+      {
+        "bin_name": "Other Asian or Pacific Islander",
+         "value": "6"
+      },
+      {
+        "bin_name": "Other race",
+         "value": "7"
+      },
+      {
+        "bin_name": "Two major races",
+         "value": "8"
+      },
+      {
+        "bin_name": "Three or more major Races",
+         "value": "9"
+      }
+    ],
+    "YEAR": [
+      {
+        "bin_name": "Year",
+        "min_value": 2010,
+        "max_value": 2018
+      }
+    ],
+    "ARRIVES": [
+      {
+        "bin_name": "24 hour time code",
+        "min_value": "0000",
+        "max_value": "2359"
+      }
+    ]
+  }
+}

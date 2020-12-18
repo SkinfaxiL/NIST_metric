@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="369d1c35-2570-4074-a443-419d56fed2a9" name="eva5">
+        <fileTransfer accessType="SFTP" host="eva5.cs.purdue.edu" port="22" sshConfigId="9b5f9167-d00a-4bf0-892d-0a441916b4ae" sshConfig="li2490@eva5.cs.purdue.edu:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
