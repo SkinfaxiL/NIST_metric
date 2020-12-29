@@ -431,7 +431,7 @@ class EventAnalysis(Base):
     def _month_only_flow(self, target_dp_data_label):
         num_incident_type = 174
         total_cells = num_incident_type * 12
-        num_flow_variables = total_cells * 2 + 2    # source and sink
+        num_flow_variables = total_cells + 2    # source and sink
         Delta = self.Delta
         alpha = self.alpha
         dp_data = self.dp_data[target_dp_data_label]
@@ -449,7 +449,7 @@ class EventAnalysis(Base):
         for truth_group, dp_group in zip(self.ground_truth.groupby(level='neighborhood'), dp_data.groupby(level='neighborhood')):
             problem_value, capacity_scale, cost_scale, inf = 0, 1, 1, 500000
             edges, node_demands = [], [0] * num_flow_variables
-            source, sink = 2 * total_cells, 2 * total_cells + 1
+            source, sink = total_cells, total_cells + 1
 
             def add_edge(u, v, demand, capacity, cost):
                 nonlocal capacity_scale, cost_scale, problem_value, edges, node_demands
@@ -468,13 +468,10 @@ class EventAnalysis(Base):
             add_edge(sink, source, 0, inf, 0)
             for i in range(total_cells):
                 month = i // num_incident_type
-                add_edge(i, i + total_cells, 0, inf, 0)
-                add_edge(i + total_cells, i, 0, inf, 0)
                 if month < 11:
-                    add_edge(i, i + total_cells + num_incident_type, 0, inf, 1)
+                    add_edge(i, i + num_incident_type, 0, inf, 1)
                 if month > 0:
-                    add_edge(i, i + total_cells - num_incident_type, 0, inf, 1)
-            for i in range(total_cells, 2 * total_cells):
+                    add_edge(i, i - num_incident_type, 0, inf, 1)
                 add_edge(source, i, 0, inf, alpha)
                 add_edge(i, sink, 0, inf, alpha)
 
@@ -486,7 +483,7 @@ class EventAnalysis(Base):
             dp_data = dp_data.flatten()
             for i in range(total_cells):
                 add_edge(source, i, truth_data[i], truth_data[i], 0)
-                add_edge(i + total_cells, sink, dp_data[i] - Delta, dp_data[i] + Delta, 0)
+                add_edge(i, sink, dp_data[i] - Delta, dp_data[i] + Delta, 0)
 
             # problem_value = round(problem_value * cost_scale * capacity_scale)
 
@@ -494,12 +491,9 @@ class EventAnalysis(Base):
             min_cost_flow = pywrapgraph.SimpleMinCostFlow()
             for (u, v, capacity, cost) in edges:
                 min_cost_flow.AddArcWithCapacityAndUnitCost(u, v, round(capacity * capacity_scale), round(cost * cost_scale))
-            
-            tmp = 0
 
             for i in range(num_flow_variables):
                 min_cost_flow.SetNodeSupply(i, -round(node_demands[i] * capacity_scale))
-                tmp += round(node_demands[i] * capacity_scale)
                 # print(i, round(node_demands[i] * capacity_scale))
 
             assert(min_cost_flow.Solve() == min_cost_flow.OPTIMAL)
