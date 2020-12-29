@@ -396,20 +396,20 @@ class EventAnalysis(Base):
             dp_data = dp_data.flatten()
             b = np.concatenate((alpha * (dp_data - Delta), -alpha * (dp_data + Delta), np.zeros(total_cells),
                                 np.zeros(num_flow_variables)))
-            b2 = np.concatenate((alpha * (truth_data - Delta), -alpha * (truth_data + Delta), np.zeros(total_cells),
-                                np.zeros(num_flow_variables)))
+            # b2 = np.concatenate((alpha * (truth_data - Delta), -alpha * (truth_data + Delta), np.zeros(total_cells),
+            #                     np.zeros(num_flow_variables)))
 
             x = Variable(num_flow_variables + 2 * total_cells)
             constraints = [A @ x >= b, F @ x == truth_data]
-            constraints2 = [A @ x >= b2, F @ x == dp_data]
+            # constraints2 = [A @ x >= b2, F @ x == dp_data]
             objective = Minimize(c.T @ x)
-            objective2 = Minimize(c.T @ x)
+            # objective2 = Minimize(c.T @ x)
             problem = Problem(objective, constraints)
-            problem2 = Problem(objective2, constraints2)
+            # problem2 = Problem(objective2, constraints2)
             problem.solve(verbose=False, solver=ECOS)
-            problem2.solve(verbose=False, solver=ECOS)
+            # problem2.solve(verbose=False, solver=ECOS)
             print(truth_group[0], 'problem state: ', problem.status, problem.value)
-            print(truth_group[0], 'problem2 state: ', problem.status, problem2.value)
+            # print(truth_group[0], 'problem2 state: ', problem.status, problem2.value)
             x = np.array(x.value)
             print('solution x: ', x, np.max(x))
             total_loss += problem.value
