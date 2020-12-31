@@ -8,13 +8,7 @@ class Base:
         self.compare_strategy = ''
         pass
 
-    def load_csv(self):
-        pass
-
-    def solve(self):
-        pass
-
-    def generate_constraints(self):
+    def compute_AEMC(self, ground_truth, dp_data):
         pass
 
     def save_json(self, result, file_name, results_dir='./result'):

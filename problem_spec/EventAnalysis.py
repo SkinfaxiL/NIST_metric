@@ -6,6 +6,9 @@ from cvxopt import matrix, solvers, spmatrix
 from datetime import datetime
 from cvxpy import *
 from scipy.sparse import csr_matrix
+from ortools.graph import pywrapgraph
+from fractions import Fraction
+import math
 
 
 class EventAnalysis(Base):
@@ -16,10 +19,11 @@ class EventAnalysis(Base):
         self.ground_truth = None
         self.dp_data_files = {"mid": 'privatized-mediocre-quality.csv',
                               "poor": 'privatized-very-poor-quality.csv'}
-        self.ground_truth = pd.read_csv(os.path.join(self.file_dir, self.ground_truth_file),
-                                        index_col=["neighborhood", "year", "month"])
-        self.dp_data = {}
         read_cols = ["neighborhood", "year", "month"] + [str(i) for i in range(174)]
+        self.ground_truth = pd.read_csv(os.path.join(self.file_dir, self.ground_truth_file),
+                                        index_col=["neighborhood", "year", "month"],
+                                        usecols=read_cols)
+        self.dp_data = {}
         for label, filename in self.dp_data_files.items():
             self.dp_data[label] = pd.read_csv(os.path.join(self.file_dir, filename),
                                               index_col=["neighborhood", "year", "month"],
@@ -29,7 +33,11 @@ class EventAnalysis(Base):
                                  "month_only": self._month_only,
                                  "month_only_V2": self._month_only_V2,
                                  "month_incident_dummy_V2": self._month_incident_dummy_V2,
-                                 "month_incident_neighbour": self._month_incident_neighbour,
+                                 "month_only_flow": self._month_only_flow,
+                                 "month_incident_dummy_flow": self._month_incident_dummy_flow,
+                                 "month_only_flow_V2": self._month_only_flow_V2,
+                                 "month_incident_dummy_flow_V2": self._month_incident_dummy_flow_V2,
+                                 "three_way_margin_flow": self._three_way_margin_flow,
                                  "simplest": self._simplest}
         self.Delta = Delta
         self.alpha = alpha
@@ -436,6 +444,482 @@ class EventAnalysis(Base):
 
         return
 
+    def _month_only_flow(self, target_dp_data_label):
+        num_incident_type = 174
+        total_cells = num_incident_type * 12
+        num_flow_variables = total_cells + 2    # source and sink
+        Delta = self.Delta
+        alpha = self.alpha
+        dp_data = self.dp_data[target_dp_data_label]
+        print("parameter: Delta/alpha", Delta, alpha)
+
+        print("calculate _month_only_flow")
+
+        # todo: feed into solver
+        start_t = datetime.now()
+        total_loss = 0
+        solved = []
+        for truth_group, dp_group in zip(self.ground_truth.groupby(level='neighborhood'), dp_data.groupby(level='neighborhood')):
+            problem_value, capacity_scale, cost_scale, inf = 0, 1, 1, 50000000
+            edges, node_demands = [], [0] * num_flow_variables
+            source, sink = total_cells, total_cells + 1
+
+            def denominator(number):
+                return Fraction.from_float(number).limit_denominator().denominator
+
+            def add_edge(u, v, demand, capacity, cost):
+                nonlocal capacity_scale, cost_scale, problem_value, edges, node_demands
+                real_capacity = capacity - demand
+                assert(real_capacity >= 0)
+                capacity_scale = math.lcm(capacity_scale, denominator(real_capacity), denominator(demand))
+                cost_scale = math.lcm(cost_scale, denominator(cost))
+                # print(u, v, num_flow_variables, len(node_demands))
+                node_demands[u] += demand
+                node_demands[v] -= demand
+                if real_capacity > 0:
+                    edges.append((u, v, real_capacity, cost))
+                problem_value += demand * cost
+            
+            # add indendent edges
+            add_edge(sink, source, 0, inf, 0)
+            for i in range(total_cells):
+                month = i // num_incident_type
+                if month < 11:
+                    add_edge(i, i + num_incident_type, 0, inf, 1)
+                if month > 0:
+                    add_edge(i, i - num_incident_type, 0, inf, 1)
+                add_edge(source, i, 0, inf, alpha)
+                add_edge(i, sink, 0, inf, alpha)
+
+            # add data
+            truth_data = truth_group[1].values.astype('float')
+            dp_data = dp_group[1].values.astype('float')
+            print("max diff of columns", np.max(np.abs(np.sum(truth_data, axis=0) - np.sum(dp_data, axis=0))) )
+            truth_data = truth_data.flatten()
+            dp_data = dp_data.flatten()
+            for i in range(total_cells):
+                add_edge(source, i, truth_data[i], truth_data[i], 0)
+                add_edge(i, sink, dp_data[i] - Delta, dp_data[i] + Delta, 0)
+
+            problem_value = round(problem_value * cost_scale * capacity_scale)
+
+            # solve
+            min_cost_flow = pywrapgraph.SimpleMinCostFlow()
+            for (u, v, capacity, cost) in edges:
+                min_cost_flow.AddArcWithCapacityAndUnitCost(u, v, round(capacity * capacity_scale), round(cost * cost_scale))
+
+            for i in range(num_flow_variables):
+                min_cost_flow.SetNodeSupply(i, -round(node_demands[i] * capacity_scale))
+                # print(i, round(node_demands[i] * capacity_scale))
+
+            assert(min_cost_flow.Solve() == min_cost_flow.OPTIMAL)
+            problem_value += min_cost_flow.OptimalCost()
+            problem_value = problem_value / capacity_scale / cost_scale
+            # print(truth_data)
+            # print(dp_data)
+            # b = np.concatenate((alpha * (dp_data - Delta), -alpha * (dp_data + Delta), np.zeros(total_cells),
+            #                     np.zeros(num_flow_variables)))
+
+            # x = Variable(num_flow_variables + 2 * total_cells)
+            # constraints = [A @ x >= b, F @ x == truth_data]
+            # objective = Minimize(c.T @ x)
+            # problem = Problem(objective, constraints)
+            # problem.solve(verbose=False, solver=ECOS)
+            # print(truth_group[0], 'problem state: ', problem.status, problem.value)
+            # x = np.array(x.value)
+            # print('solution x: ', x, np.max(x))
+            abs_diff = np.sum(np.abs(truth_data - dp_data))
+            print("abs diff v.s. AEMD:", abs_diff, problem_value)
+            print("===============")
+            total_loss += problem_value
+            solved.append({'loss': problem_value})
+            self.save_json(solved, 'month_only_flow')
+        print("total_time:", datetime.now() - start_t)
+        print("total loss:", total_loss)
+        return
+
+
+    def _month_only_flow_V2(self, target_dp_data_label):
+        num_incident_type = 174
+        total_cells = num_incident_type * 12
+        num_flow_variables = total_cells * 2 + 2    # source and sink
+        Delta = self.Delta
+        alpha = self.alpha
+        dp_data = self.dp_data[target_dp_data_label]
+        print("parameter: Delta/alpha", Delta, alpha)
+
+        print("calculate _month_only_flow_V2")
+
+        # todo: feed into solver
+        start_t = datetime.now()
+        total_loss = 0
+        solved = []
+        for truth_group, dp_group in zip(self.ground_truth.groupby(level='neighborhood'), dp_data.groupby(level='neighborhood')):
+            problem_value, capacity_scale, cost_scale, inf = 0, 1, 1, 50000000
+            edges, node_demands = [], [0] * num_flow_variables
+            source, sink = total_cells * 2, total_cells * 2 + 1
+
+            def denominator(number):
+                return Fraction.from_float(number).limit_denominator().denominator
+
+            def add_edge(u, v, demand, capacity, cost):
+                nonlocal capacity_scale, cost_scale, problem_value, edges, node_demands
+                real_capacity = capacity - demand
+                assert(real_capacity >= 0)
+                capacity_scale = math.lcm(capacity_scale, denominator(real_capacity), denominator(demand))
+                cost_scale = math.lcm(cost_scale, denominator(cost))
+                # print(u, v, num_flow_variables, len(node_demands))
+                node_demands[u] += demand
+                node_demands[v] -= demand
+                if real_capacity > 0:
+                    edges.append((u, v, real_capacity, cost))
+                problem_value += demand * cost
+            
+            # add indendent edges
+            add_edge(sink, source, 0, inf, 0)
+            for i in range(total_cells):
+                month = i // num_incident_type
+                add_edge(i, i + total_cells, -inf, inf, 0)
+                if month < 11:
+                    add_edge(i, i + total_cells + num_incident_type, 0, inf, 1)
+                if month > 0:
+                    add_edge(i, i + total_cells - num_incident_type, 0, inf, 1)
+                add_edge(source, i + total_cells, 0, inf, alpha)
+                add_edge(i + total_cells, sink, 0, inf, alpha)
+
+            # add data
+            truth_data = truth_group[1].values.astype('float')
+            dp_data = dp_group[1].values.astype('float')
+            print("max diff of columns", np.max(np.abs(np.sum(truth_data, axis=0) - np.sum(dp_data, axis=0))) )
+            truth_data = truth_data.flatten()
+            dp_data = dp_data.flatten()
+            for i in range(total_cells):
+                add_edge(source, i, truth_data[i], truth_data[i], 0)
+                add_edge(i + total_cells, sink, dp_data[i] - Delta, dp_data[i] + Delta, 0)
+
+            problem_value = round(problem_value * cost_scale * capacity_scale)
+
+            # solve
+            min_cost_flow = pywrapgraph.SimpleMinCostFlow()
+            for (u, v, capacity, cost) in edges:
+                min_cost_flow.AddArcWithCapacityAndUnitCost(u, v, round(capacity * capacity_scale), round(cost * cost_scale))
+
+            for i in range(num_flow_variables):
+                min_cost_flow.SetNodeSupply(i, -round(node_demands[i] * capacity_scale))
+                # print(i, round(node_demands[i] * capacity_scale))
+
+            assert(min_cost_flow.Solve() == min_cost_flow.OPTIMAL)
+            problem_value += min_cost_flow.OptimalCost()
+            problem_value = problem_value / capacity_scale / cost_scale
+            # print(truth_data)
+            # print(dp_data)
+            # b = np.concatenate((alpha * (dp_data - Delta), -alpha * (dp_data + Delta), np.zeros(total_cells),
+            #                     np.zeros(num_flow_variables)))
+
+            # x = Variable(num_flow_variables + 2 * total_cells)
+            # constraints = [A @ x >= b, F @ x == truth_data]
+            # objective = Minimize(c.T @ x)
+            # problem = Problem(objective, constraints)
+            # problem.solve(verbose=False, solver=ECOS)
+            # print(truth_group[0], 'problem state: ', problem.status, problem.value)
+            # x = np.array(x.value)
+            # print('solution x: ', x, np.max(x))
+            abs_diff = np.sum(np.abs(truth_data - dp_data))
+            print("abs diff v.s. AEMD:", abs_diff, problem_value)
+            print("===============")
+            total_loss += problem_value
+            solved.append({'loss': problem_value})
+            self.save_json(solved, 'month_only_flow_V2')
+        print("total_time:", datetime.now() - start_t)
+        print("total loss:", total_loss)
+        return
+
+
+    def _month_incident_dummy_flow(self, target_dp_data_label):
+        num_incident_type = 174
+        total_cells = num_incident_type * 12
+        num_flow_variables = total_cells + 2 + 12    # source, sink, and 12 dummy nodes
+        Delta = self.Delta
+        alpha = self.alpha
+        dp_data = self.dp_data[target_dp_data_label]
+        print("parameter: Delta/alpha", Delta, alpha)
+
+        print("calculate _month_incident_dummy_flow")
+
+        # todo: feed into solver
+        start_t = datetime.now()
+        total_loss = 0
+        solved = []
+        for truth_group, dp_group in zip(self.ground_truth.groupby(level='neighborhood'), dp_data.groupby(level='neighborhood')):
+            problem_value, capacity_scale, cost_scale, inf = 0, 1, 1, 50000000
+            edges, node_demands = [], [0] * num_flow_variables
+            source, sink, dummy = total_cells, total_cells + 1, total_cells + 2
+
+            def denominator(number):
+                return Fraction.from_float(number).limit_denominator().denominator
+
+            def add_edge(u, v, demand, capacity, cost):
+                nonlocal capacity_scale, cost_scale, problem_value, edges, node_demands
+                real_capacity = capacity - demand
+                assert(real_capacity >= 0)
+                capacity_scale = math.lcm(capacity_scale, denominator(real_capacity), denominator(demand))
+                cost_scale = math.lcm(cost_scale, denominator(cost))
+                # print(u, v, num_flow_variables, len(node_demands))
+                node_demands[u] += demand
+                node_demands[v] -= demand
+                if real_capacity > 0:
+                    edges.append((u, v, real_capacity, cost))
+                problem_value += demand * cost
+            
+            # add indendent edges
+            add_edge(sink, source, 0, inf, 0)
+            for i in range(total_cells):
+                month = i // num_incident_type
+                if month < 11:
+                    add_edge(i, i + num_incident_type, 0, inf, 1)
+                if month > 0:
+                    add_edge(i, i - num_incident_type, 0, inf, 1)
+                add_edge(source, i, 0, inf, alpha)
+                add_edge(i, sink, 0, inf, alpha)
+                add_edge(i, dummy + month, 0, inf, 0.5)
+                add_edge(dummy + month, i, 0, inf, 0.5)
+
+            # add data
+            truth_data = truth_group[1].values.astype('float')
+            dp_data = dp_group[1].values.astype('float')
+            print("max diff of columns", np.max(np.abs(np.sum(truth_data, axis=0) - np.sum(dp_data, axis=0))) )
+            truth_data = truth_data.flatten()
+            dp_data = dp_data.flatten()
+            for i in range(total_cells):
+                add_edge(source, i, truth_data[i], truth_data[i], 0)
+                add_edge(i, sink, dp_data[i] - Delta, dp_data[i] + Delta, 0)
+
+            problem_value = round(problem_value * cost_scale * capacity_scale)
+
+            # solve
+            min_cost_flow = pywrapgraph.SimpleMinCostFlow()
+            for (u, v, capacity, cost) in edges:
+                min_cost_flow.AddArcWithCapacityAndUnitCost(u, v, round(capacity * capacity_scale), round(cost * cost_scale))
+
+            for i in range(num_flow_variables):
+                min_cost_flow.SetNodeSupply(i, -round(node_demands[i] * capacity_scale))
+                # print(i, round(node_demands[i] * capacity_scale))
+
+            assert(min_cost_flow.Solve() == min_cost_flow.OPTIMAL)
+            problem_value += min_cost_flow.OptimalCost()
+            problem_value = problem_value / capacity_scale / cost_scale
+            # print(truth_data)
+            # print(dp_data)
+            # b = np.concatenate((alpha * (dp_data - Delta), -alpha * (dp_data + Delta), np.zeros(total_cells),
+            #                     np.zeros(num_flow_variables)))
+
+            # x = Variable(num_flow_variables + 2 * total_cells)
+            # constraints = [A @ x >= b, F @ x == truth_data]
+            # objective = Minimize(c.T @ x)
+            # problem = Problem(objective, constraints)
+            # problem.solve(verbose=False, solver=ECOS)
+            # print(truth_group[0], 'problem state: ', problem.status, problem.value)
+            # x = np.array(x.value)
+            # print('solution x: ', x, np.max(x))
+            abs_diff = np.sum(np.abs(truth_data - dp_data))
+            print("abs diff v.s. AEMD:", abs_diff, problem_value)
+            print("===============")
+            total_loss += problem_value
+            solved.append({'loss': problem_value})
+            self.save_json(solved, 'month_incident_dummy_flow')
+        print("total_time:", datetime.now() - start_t)
+        print("total loss:", total_loss)
+        return
+
+
+    def _month_incident_dummy_flow_V2(self, target_dp_data_label):
+        num_incident_type = 174
+        total_cells = num_incident_type * 12
+        num_flow_variables = total_cells * 2 + 2 + 12    # source, sink, and 12 dummy nodes
+        Delta = self.Delta
+        alpha = self.alpha
+        dp_data = self.dp_data[target_dp_data_label]
+        print("parameter: Delta/alpha", Delta, alpha)
+
+        print("calculate _month_incident_dummy_flow_V2")
+
+        # todo: feed into solver
+        start_t = datetime.now()
+        total_loss = 0
+        solved = []
+        for truth_group, dp_group in zip(self.ground_truth.groupby(level='neighborhood'), dp_data.groupby(level='neighborhood')):
+            problem_value, capacity_scale, cost_scale, inf = 0, 1, 1, 50000000
+            edges, node_demands = [], [0] * num_flow_variables
+            source, sink, dummy = 2 * total_cells, 2 * total_cells + 1, 2 * total_cells + 2
+
+            def denominator(number):
+                return Fraction.from_float(number).limit_denominator().denominator
+
+            def add_edge(u, v, demand, capacity, cost):
+                nonlocal capacity_scale, cost_scale, problem_value, edges, node_demands
+                real_capacity = capacity - demand
+                assert(real_capacity >= 0)
+                capacity_scale = math.lcm(capacity_scale, denominator(real_capacity), denominator(demand))
+                cost_scale = math.lcm(cost_scale, denominator(cost))
+                # print(u, v, num_flow_variables, len(node_demands))
+                node_demands[u] += demand
+                node_demands[v] -= demand
+                if real_capacity > 0:
+                    edges.append((u, v, real_capacity, cost))
+                problem_value += demand * cost
+
+            # add indendent edges
+            add_edge(sink, source, 0, inf, 0)
+            for i in range(total_cells):
+                month = i // num_incident_type
+                add_edge(i, i + total_cells, -inf, inf, 0)
+                if month < 11:
+                    add_edge(i, i + total_cells + num_incident_type, 0, inf, 1)
+                if month > 0:
+                    add_edge(i, i + total_cells - num_incident_type, 0, inf, 1)
+                add_edge(source, i + total_cells, 0, inf, alpha)
+                add_edge(i + total_cells, sink, 0, inf, alpha)
+                add_edge(i, dummy + month, 0, inf, 0.5)
+                add_edge(dummy + month, i, 0, inf, 0.5)
+
+            # add data
+            truth_data = truth_group[1].values.astype('float')
+            dp_data = dp_group[1].values.astype('float')
+            print("max diff of columns", np.max(np.abs(np.sum(truth_data, axis=0) - np.sum(dp_data, axis=0))) )
+            truth_data = truth_data.flatten()
+            dp_data = dp_data.flatten()
+            for i in range(total_cells):
+                add_edge(source, i, truth_data[i], truth_data[i], 0)
+                add_edge(i + total_cells, sink, dp_data[i] - Delta, dp_data[i] + Delta, 0)
+
+            problem_value = round(problem_value * cost_scale * capacity_scale)
+
+            # solve
+            min_cost_flow = pywrapgraph.SimpleMinCostFlow()
+            for (u, v, capacity, cost) in edges:
+                min_cost_flow.AddArcWithCapacityAndUnitCost(u, v, round(capacity * capacity_scale), round(cost * cost_scale))
+
+            for i in range(num_flow_variables):
+                min_cost_flow.SetNodeSupply(i, -round(node_demands[i] * capacity_scale))
+                # print(i, round(node_demands[i] * capacity_scale))
+
+            assert(min_cost_flow.Solve() == min_cost_flow.OPTIMAL)
+            problem_value += min_cost_flow.OptimalCost()
+            problem_value = problem_value / capacity_scale / cost_scale
+            # print(truth_data)
+            # print(dp_data)
+            # b = np.concatenate((alpha * (dp_data - Delta), -alpha * (dp_data + Delta), np.zeros(total_cells),
+            #                     np.zeros(num_flow_variables)))
+
+            # x = Variable(num_flow_variables + 2 * total_cells)
+            # constraints = [A @ x >= b, F @ x == truth_data]
+            # objective = Minimize(c.T @ x)
+            # problem = Problem(objective, constraints)
+            # problem.solve(verbose=False, solver=ECOS)
+            # print(truth_group[0], 'problem state: ', problem.status, problem.value)
+            # x = np.array(x.value)
+            # print('solution x: ', x, np.max(x))
+            abs_diff = np.sum(np.abs(truth_data - dp_data))
+            print("abs diff v.s. AEMD:", abs_diff, problem_value)
+            print("===============")
+            total_loss += problem_value
+            solved.append({'loss': problem_value})
+            self.save_json(solved, 'month_incident_dummy_flow_V2')
+        print("total_time:", datetime.now() - start_t)
+        print("total loss:", total_loss)
+        return
+
+
+
+    def _three_way_margin_flow(self, target_dp_data_label):
+        num_incident_type = 174
+        num_neighborhood_type = 278
+        total_cells = num_incident_type * num_neighborhood_type * 12
+        num_flow_variables = total_cells + 2 + 12 * num_neighborhood_type + 12 * num_incident_type # source, sink, dummy nodes
+        Delta = self.Delta
+        alpha = self.alpha
+        dp_data = self.dp_data[target_dp_data_label]
+        print("parameter: Delta/alpha", Delta, alpha)
+
+        print("calculate _three_way_margin_flow")
+
+        # todo: feed into solver
+        start_t = datetime.now()
+        total_loss = 0
+        solved = []
+
+        problem_value, capacity_scale, cost_scale, inf = 0, 1, 1, 50000000
+        edges, node_demands = [], [0] * num_flow_variables
+        source, sink = total_cells, total_cells + 1
+        incident_dummy, neighborhood_dummy = total_cells + 2, total_cells + 2 + 12 * num_neighborhood_type
+
+        def denominator(number):
+            # return number.as_integer_ratio()[1]
+            return Fraction.from_float(number).limit_denominator().denominator
+
+        def add_edge(u, v, demand, capacity, cost):
+            nonlocal capacity_scale, cost_scale, problem_value, edges, node_demands
+            real_capacity = capacity - demand
+            assert(real_capacity >= 0)
+            # capacity_scale = math.lcm(capacity_scale, denominator(real_capacity), denominator(demand))
+            # cost_scale = math.lcm(cost_scale, denominator(cost))
+            capacity_scale = np.lcm.reduce([capacity_scale, denominator(real_capacity), denominator(demand)])
+            cost_scale = np.lcm.reduce([cost_scale, denominator(cost)])
+            node_demands[u] += demand
+            node_demands[v] -= demand
+            if real_capacity > 0:
+                edges.append((u, v, real_capacity, cost))
+            problem_value += demand * cost
+        
+        # add indendent edges
+        add_edge(sink, source, 0, inf, 0)
+        for i in range(total_cells):
+            neighborhood = i // (num_incident_type * 12)
+            month = (i - neighborhood * num_incident_type * 12) // num_incident_type
+            incident_type = i - neighborhood * num_incident_type * 12 - month * num_incident_type
+            if month < 11:
+                add_edge(i, i + num_incident_type, 0, inf, 1)
+            if month > 0:
+                add_edge(i, i - num_incident_type, 0, inf, 1)
+            add_edge(source, i, 0, inf, alpha)
+            add_edge(i, sink, 0, inf, alpha)
+            add_edge(i, incident_dummy + neighborhood * 12 + month, 0, inf, 0.5)
+            add_edge(incident_dummy + neighborhood * 12 + month, i, 0, inf, 0.5)
+            add_edge(i, neighborhood_dummy + incident_type * 12 + month, 0, inf, 0.5)
+            add_edge(neighborhood_dummy + incident_type * 12 + month, i, 0, inf, 0.5)
+
+        # add data
+        truth_data = self.ground_truth.values.astype('float')
+        dp_data = dp_data.values.astype('float')
+        print("max diff of columns", np.max(np.abs(np.sum(truth_data, axis=0) - np.sum(dp_data, axis=0))) )
+        truth_data = truth_data.flatten()
+        dp_data = dp_data.flatten()
+        for i in range(total_cells):
+            add_edge(source, i, truth_data[i], truth_data[i], 0)
+            add_edge(i, sink, dp_data[i] - Delta, dp_data[i] + Delta, 0)
+
+        problem_value = round(problem_value * cost_scale * capacity_scale)
+
+        # solve
+        min_cost_flow = pywrapgraph.SimpleMinCostFlow()
+        for (u, v, capacity, cost) in edges:
+            min_cost_flow.AddArcWithCapacityAndUnitCost(u, v, round(capacity * capacity_scale), round(cost * cost_scale))
+
+        for i in range(num_flow_variables):
+            min_cost_flow.SetNodeSupply(i, -round(node_demands[i] * capacity_scale))
+
+        assert(min_cost_flow.Solve() == min_cost_flow.OPTIMAL)
+        problem_value += min_cost_flow.OptimalCost()
+        problem_value = problem_value / capacity_scale / cost_scale
+        abs_diff = np.sum(np.abs(truth_data - dp_data))
+        print("abs diff v.s. AEMD:", abs_diff, problem_value)
+        print("===============")
+        total_loss += problem_value
+        solved.append({'loss': problem_value})
+        self.save_json(solved, '_three_way_margin_flow')
+        print("total_time:", datetime.now() - start_t)
+        print("total loss:", total_loss)
+        return
 
     def _simplest(self, target_dp_data_label):
         print("calculate _exact_emd")
