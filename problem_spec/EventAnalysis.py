@@ -333,13 +333,17 @@ class EventAnalysis(Base):
         N = np.zeros((total_cells, num_flow_variables))
         for i in range(total_cells):
             if (i + 1) % num_incident_type_with_dummy == 0:
-                month = int((i + 1) / num_incident_type_with_dummy)
-                related_idx_start = within_month_base_idx + (month - 1) * 2 * num_incident_type
+                month = int(i / num_incident_type_with_dummy)
+                related_idx_start = within_month_base_idx + month * 2 * num_incident_type
+                # flow out
                 N[i, related_idx_start + num_incident_type: related_idx_start + 2 * num_incident_type] = 1
+                # flow in
                 N[i, related_idx_start: related_idx_start + num_incident_type] = -1
                 S[i, related_idx_start: related_idx_start + num_incident_type] = 0.5
-            elif i < num_incident_type_with_dummy:
+            elif i < num_incident_type:
+                # flow out
                 N[i, [i, within_month_base_idx + i]] = 1
+                # flow in
                 N[i, [to_pre_base_idx + i, within_month_base_idx + num_incident_type + i]] = -1
                 S[i, to_pre_base_idx + i] = 1
                 S[i, within_month_base_idx + num_incident_type + i] = 0.5
@@ -347,19 +351,19 @@ class EventAnalysis(Base):
                 incident_type = i % num_incident_type_with_dummy
                 within_month_start_idx = within_month_base_idx + 22 * num_incident_type
                 N[i, [to_pre_base_idx + 10 * num_incident_type + incident_type, within_month_start_idx + incident_type]] = 1
-                N[i, [11 * num_incident_type + incident_type - num_incident_type, within_month_start_idx + num_incident_type + incident_type]] = -1
+                N[i, [10 * num_incident_type + incident_type, within_month_start_idx + num_incident_type + incident_type]] = -1
                 S[i, 11 * num_incident_type + incident_type - num_incident_type] = 1
                 S[i, within_month_start_idx + num_incident_type + incident_type] = 0.5
             else:
                 m = int(i / num_incident_type_with_dummy)
                 incident_type = i % num_incident_type_with_dummy
-                within_month_start_idx = within_month_base_idx + m * num_incident_type
+                within_month_start_idx = within_month_base_idx + 2 * m * num_incident_type
                 N[i, [m * num_incident_type + incident_type, to_pre_base_idx + (m - 1) * num_incident_type + incident_type]] = 1
                 N[i, within_month_start_idx + incident_type] = 1
-                N[i, [m * num_incident_type + incident_type - num_incident_type, to_pre_base_idx + m * num_incident_type + incident_type]] = -1
-                N[i, within_month_start_idx + num_incident_type +incident_type] = 1
-                S[i, [m * num_incident_type + incident_type - num_incident_type, to_pre_base_idx + m * num_incident_type + incident_type]] = 1
-                S[i, within_month_start_idx + num_incident_type +incident_type] = 0.5
+                N[i, [(m - 1) * num_incident_type + incident_type, to_pre_base_idx + m * num_incident_type + incident_type]] = -1
+                N[i, within_month_start_idx + num_incident_type + incident_type] = 1
+                S[i, [(m - 1) * num_incident_type + incident_type, to_pre_base_idx + m * num_incident_type + incident_type]] = 1
+                S[i, within_month_start_idx + num_incident_type + incident_type] = 0.5
 
         A = np.zeros((3 * total_cells + num_flow_variables, num_flow_variables + 2 * total_cells))
         A[:total_cells, :num_flow_variables] = -S
@@ -373,9 +377,12 @@ class EventAnalysis(Base):
         A[2 * total_cells:3 * total_cells, num_flow_variables + total_cells:] = np.eye(total_cells)
         A[3 * total_cells:, :num_flow_variables] = np.eye(num_flow_variables)
 
-        F = np.zeros((total_cells, num_flow_variables + 2 * total_cells))
-        F[:, :num_flow_variables] = N
-        F[:, num_flow_variables:num_flow_variables + total_cells] = np.eye(total_cells)
+        F = np.zeros((total_cells + months, num_flow_variables + 2 * total_cells))
+        F[:total_cells, :num_flow_variables] = N
+        F[:total_cells, num_flow_variables:num_flow_variables + total_cells] = np.eye(total_cells)
+        for m in range(months):
+            # print(num_incident_type_with_dummy * m + num_incident_type)
+            F[total_cells + m, num_flow_variables + num_incident_type_with_dummy * m + num_incident_type] = 1
         print("Initialize constraint matrix done")
 
         # distance = np.ones((num_flow_variables, 1))
@@ -402,7 +409,8 @@ class EventAnalysis(Base):
             #                     np.zeros(num_flow_variables)))
 
             x = Variable(num_flow_variables + 2 * total_cells)
-            constraints = [A @ x >= b, F @ x == truth_data]
+            truth_data_appended = np.append(truth_data, np.zeros(months), 0)
+            constraints = [A @ x >= b, F @ x == truth_data_appended]
             # constraints2 = [A @ x >= b2, F @ x == dp_data]
             objective = Minimize(c.T @ x)
             # objective2 = Minimize(c.T @ x)
@@ -414,149 +422,15 @@ class EventAnalysis(Base):
             # print(truth_group[0], 'problem2 state: ', problem.status, problem2.value)
             x = np.array(x.value)
             print('solution x: ', x, np.max(x))
+            for m in range(months):
+                print(x[num_flow_variables + num_incident_type_with_dummy * m + num_incident_type])
             total_loss += problem.value
             abs_diff = np.sum(np.abs(truth_data - dp_data))
-            print("abs diff v.s. AEMD:", abs_diff, problem.value)
+            # print("abs diff v.s. AEMD:", abs_diff, problem.value)
             print("===============")
+            exit()
             solved.append({'loss': problem.value, 'x': x.tolist()})
             self.save_json(solved, 'month_incident_dummy_V2')
-        print("total_time:", datetime.now() - start_t)
-        print("total loss:", total_loss)
-
-        return
-
-    def _month_incident_neighbour(self, target_dp_data_label):
-        print("calculate _month_incident_dummy")
-        num_incident_type = 174
-        num_incident_type_with_dummy = 175
-        num_neighbour = 278
-        num_neighbour_with_dummy = 279
-        months = 12
-        total_cells = num_incident_type_with_dummy * num_neighbour_with_dummy * months
-        num_flow_variables = (10 * 4 + 2 * 3) * num_incident_type * num_neighbour + \
-                             months * num_incident_type * num_neighbour + months * num_incident_type
-        Delta = self.Delta
-        alpha = self.alpha
-        dp_data = self.dp_data[target_dp_data_label]
-        print("parameter: Delta/alpha", Delta, alpha)
-
-        '''
-        design x in a way that for each cell
-        if not dummy 
-        [flow_to_next_month, flow_to_pre_month, flow_to_dummy_incident, flow_to_dummy_neighbour]
-        if dummy incident
-        [flows_to_all_incidents_in_same_month_neighbor]
-        if dummy neighbor
-        [flows_to_all_neighbor_with_same_month_incident]
-        '''
-        S = csr_matrix((total_cells, num_flow_variables))
-        N = csr_matrix((total_cells, num_flow_variables))
-        per_neighbor_flows = 3 * num_incident_type * 2 + 4 * num_incident_type * 10 + num_incident_type * 12
-        dummy_neighbor_start = num_neighbour * per_neighbor_flows
-        edge_month_flows = 3 * num_incident_type + num_incident_type
-        normal_month_flows = 4 * num_incident_type + num_incident_type
-        for i in range(total_cells):
-            if i % 1000 == 0:
-                print("init", i)
-            neighbor = int(i / (num_incident_type_with_dummy * months))
-            month = int((i - neighbor * num_incident_type_with_dummy * months) / num_incident_type_with_dummy)
-            incident_type = int( (i - neighbor * num_incident_type_with_dummy * months) % num_incident_type_with_dummy )
-            if month == 0:
-                self_idx = neighbor * per_neighbor_flows + incident_type * 3
-                if incident_type == num_incident_type:
-                    N[i, self_idx: self_idx + num_incident_type] = -1
-                    S[i, self_idx: self_idx + num_incident_type] = 0.5
-                else:
-                    month_flow_in_idx = edge_month_flows + incident_type * 4 + 1
-                    dummy_incident_flow_in_idx = self_idx + (num_incident_type - incident_type) * 3 + incident_type
-                    dummy_neighbour_flow_in_idx = dummy_neighbor_start + num_incident_type * month + incident_type
-                    N[i, self_idx: self_idx + 3] = 1
-                    N[i, [month_flow_in_idx, dummy_incident_flow_in_idx, dummy_neighbour_flow_in_idx]] = -1
-                    S[i, month_flow_in_idx] = 1
-                    S[i, [dummy_incident_flow_in_idx, dummy_neighbour_flow_in_idx]] = 0.5
-            elif month == 11:
-                self_idx = neighbor * per_neighbor_flows + edge_month_flows + normal_month_flows * 10 + incident_type * 3
-                if incident_type == num_incident_type:
-                    N[i, self_idx: self_idx + num_incident_type] = -1
-                    S[i, self_idx: self_idx + num_incident_type] = 0.5
-                else:
-                    month_flow_in_idx = neighbor * per_neighbor_flows + edge_month_flows + normal_month_flows * 9 + incident_type * 4
-                    dummy_incident_flow_in_idx = self_idx + (num_incident_type - incident_type) * 3 + incident_type
-                    dummy_neighbour_flow_in_idx = dummy_neighbor_start + num_incident_type * month + incident_type
-                    N[i, self_idx: self_idx + 3] = 1
-                    N[i, [month_flow_in_idx, dummy_incident_flow_in_idx, dummy_neighbour_flow_in_idx]] = -1
-                    S[i, month_flow_in_idx] = 1
-                    S[i, [dummy_incident_flow_in_idx, dummy_neighbour_flow_in_idx]] = 0.5
-            else:
-                self_idx = neighbor * per_neighbor_flows + edge_month_flows + normal_month_flows * (month - 1) + incident_type * 4
-                # print("here", self_idx, month, neighbor, incident_type)
-                if incident_type == num_incident_type:
-                    N[i, self_idx: self_idx + num_incident_type] = -1
-                    S[i, self_idx: self_idx + num_incident_type] = 0.5
-                else:
-                    month_flow_in_idx_1 = self_idx - normal_month_flows
-                    month_flow_in_idx_2 = self_idx + normal_month_flows + 1
-                    dummy_incident_flow_in_idx = self_idx + (num_incident_type - incident_type) * 4 + incident_type
-                    dummy_neighbour_flow_in_idx = dummy_neighbor_start + num_incident_type * month + incident_type
-                    N[i, self_idx: self_idx + 3] = 1
-                    N[i, [month_flow_in_idx_1, month_flow_in_idx_2, dummy_incident_flow_in_idx, dummy_neighbour_flow_in_idx]] = -1
-                    S[i, [month_flow_in_idx_1, month_flow_in_idx_2]] = 1
-                    S[i, [dummy_incident_flow_in_idx, dummy_neighbour_flow_in_idx]] = 0.5
-
-
-        A = csr_matrix((3 * total_cells + num_flow_variables, num_flow_variables + 2 * total_cells))
-        A[:total_cells, :num_flow_variables] = -S
-        A[:total_cells, num_flow_variables:num_flow_variables + total_cells] = alpha * np.eye(total_cells)
-        A[:total_cells, num_flow_variables + total_cells:] = np.eye(total_cells)
-        A[total_cells:2 * total_cells, :num_flow_variables] = -S
-        A[total_cells:2 * total_cells, num_flow_variables:num_flow_variables + total_cells] = -alpha * np.eye(
-            total_cells)
-        A[total_cells:2 * total_cells, num_flow_variables + total_cells:] = np.eye(total_cells)
-        A[2 * total_cells:3 * total_cells, :num_flow_variables] = -S
-        A[2 * total_cells:3 * total_cells, num_flow_variables + total_cells:] = np.eye(total_cells)
-        A[3 * total_cells:, :num_flow_variables] = np.eye(num_flow_variables)
-
-        F = csr_matrix((total_cells, num_flow_variables + 2 * total_cells))
-        F[:, :num_flow_variables] = N
-        F[:, num_flow_variables:num_flow_variables + total_cells] = np.eye(total_cells)
-        print("Initialize constraint matrix done")
-
-        c = np.array([0] * (num_flow_variables + total_cells) + [1] * total_cells).reshape((-1, 1))
-        print("Use 1 for all distances between neighbors")
-
-        # todo: feed into solver
-        start_t = datetime.now()
-        total_loss = 0
-        solved = []
-
-        truth_data = self.ground_truth.values.astype('float')
-        dp_data = dp_data.values.astype('float')
-        # append dummy incident and dummy neighbour
-        truth_data = np.append(truth_data, np.zeros((truth_data.shape[0], 1)), 1)
-        truth_data = np.append(truth_data, np.zeros((months, num_neighbour_with_dummy)), 0)
-        dp_data = np.append(dp_data, np.zeros((dp_data.shape[0], 1)), 1)
-        dp_data = np.append(dp_data, np.zeros((months, num_neighbour_with_dummy)), 0)
-        print("max diff of columns", np.max(np.abs(np.sum(truth_data, axis=0) - np.sum(dp_data, axis=0))))
-        truth_data = truth_data.flatten()
-        dp_data = dp_data.flatten()
-        b = np.concatenate((alpha * (dp_data - Delta), -alpha * (dp_data + Delta), np.zeros(total_cells),
-                            np.zeros(num_flow_variables)))
-
-        x = Variable(num_flow_variables + 2 * total_cells)
-        constraints = [A @ x >= b, F @ x == truth_data]
-        objective = Minimize(c.T @ x)
-        problem = Problem(objective, constraints)
-        problem.solve(verbose=False, solver=ECOS)
-        print('problem state: ', problem.status, problem.value)
-
-        x = np.array(x.value)
-        print('solution x: ', x, np.max(x))
-        total_loss += problem.value
-        abs_diff = np.sum(np.abs(truth_data - dp_data))
-        print("abs diff v.s. AEMD:", abs_diff, problem.value)
-        print("===============")
-        solved.append({'loss': problem.value, 'x': x.tolist()})
-        self.save_json(solved, 'month_incident_neighbor')
         print("total_time:", datetime.now() - start_t)
         print("total loss:", total_loss)
 
