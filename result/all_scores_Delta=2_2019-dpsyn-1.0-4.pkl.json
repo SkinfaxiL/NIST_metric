@@ -1,0 +1,12 @@
+{
+  "file": "./data/event_dpsyn/2019-dpsyn-1.0-4.pkl",
+  "Delta": 2,
+  "pie_chart:": 1409.0170691512383,
+  "1-way(month)": 6593.0,
+  "1-way(neighbor)": 11795.0,
+  "1-way(incident)": 24128.0,
+  "2-way(month-incident)": 35617.0,
+  "2-way(month-neighborhood)": 35370.0,
+  "2-way(neighborhood-incident)": 96322.0,
+  "3-way": 158726.0
+}

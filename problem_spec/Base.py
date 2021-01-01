@@ -1,6 +1,8 @@
 import json
 from datetime import datetime
 import os
+import numpy as np
+
 
 class Base:
     def __init__(self):
@@ -17,3 +19,9 @@ class Base:
         json_file_name = os.path.join(results_dir, file_name+ '-' + self.start_time + '.json')
         with open(json_file_name, 'w') as f:
             json.dump(result, f, indent=2)
+
+
+    def normalize(self, raw_score, ground_truth):
+        total_count = np.sum(ground_truth.values)
+        normalized_score = raw_score / total_count
+        return normalized_score

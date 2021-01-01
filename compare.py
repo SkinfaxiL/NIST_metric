@@ -6,6 +6,7 @@ from problem_spec.Event1way_month import Event1way_month
 from problem_spec.Event1way_neighbor import Event1way_neighbor
 from problem_spec.Event1way_incident_type import Event1way_incident_type
 from problem_spec.piechart_metric import Deid2Metric
+from problem_spec.range_query import RangeQuery
 import argparse
 import pandas as pd
 import pickle
@@ -42,28 +43,37 @@ def save_json(result, file_name, results_dir='./result'):
         json.dump(result, f, indent=2)
 
 def main():
-    # todo: load truth data and private data
+    # load truth data and private data
     ground_truth = load_data(ground_truth_file)
     dp_syn = load_data(args.dp_data, args.is_dp_data_pickle, deepcopy(ground_truth))
     scores = {}
     scores['file'] = args.dp_data
     scores['Delta'] = args.Delta
-    # todo: compute pie chart score
+    # compute pie chart score
     pie_chart_scorer = Deid2Metric()
     pie_chart_overall_score, row_scores = pie_chart_scorer.score(ground_truth.values, dp_syn.values,
                                                                  return_individual_scores=True)
+    normalized_score = pie_chart_scorer.normalized_by_row(pie_chart_overall_score, ground_truth.values)
     print("pie chart score:", pie_chart_overall_score)
-    scores['pie_chart:'] = pie_chart_overall_score
+    scores['pie_chart'] = [pie_chart_overall_score, normalized_score]
     print("==" * 20)
-    # todo: compute AEMD for 7 different marginals
+    # compute pie chart score
+    rq_scorer = RangeQuery()
+    raw_scores, relative_score = rq_scorer.score(ground_truth, dp_syn, month_range=4,
+                                 neighborhood_range=int(278*0.3), incident_types_range=int(174*0.3))
+    print("range query score:", raw_scores, relative_score)
+    scores['range_query'] = [raw_scores, relative_score]
+    print("==" * 20)
+    # compute AEMD for 7 different marginals
     for m, metric in AEMD_metrics.items():
         problem = metric(args.Delta)
         score = problem.compute_AEMC(ground_truth, dp_syn)
-        print('---->', m, score)
-        scores[m] = score
+        normalized_score = problem.normalize(score, ground_truth)
+        print('---->', m, score, normalized_score)
+        scores[m] = [score, normalized_score]
         print("=="*20)
 
-    save_json(scores, 'all_scores_Delta=' args.Delta + '_' + os.path.split(args.dp_data)[-1] + '.json')
+    save_json(scores, 'all_scores_Delta=' + str(args.Delta) + '_' + os.path.split(args.dp_data)[-1] + '.json')
 
 
 if __name__ == "__main__":

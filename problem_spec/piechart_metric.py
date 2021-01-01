@@ -167,3 +167,7 @@ class Deid2Metric:
             return overall_score, scores
 
         return overall_score
+
+    def normalized_by_row(self, overall_score, actual):
+        normalized_score = overall_score / actual.shape[0]
+        return normalized_score
