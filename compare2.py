@@ -73,6 +73,22 @@ def main():
     update_str += '  &' + str(round(scores['range_query'][-1], 4))
     print("==" * 20)
 
+    # compute jaccard score
+    jaccard_scorer = Jaccard()
+    total, avg_score, inverse_jaccard = jaccard_scorer.score(ground_truth, dp_syn)
+    print("Jaccard score:", total, avg_score, inverse_jaccard)
+    scores['jaccard'] = [total, avg_score, inverse_jaccard]
+    update_str += '  &' + str(round(scores['jaccard'][-1], 4))
+    print("==" * 20)
+
+    # compute jaccard score 2
+    jaccard_scorer2 = Jaccard2()
+    total, avg_score, inverse_jaccard = jaccard_scorer2.score(ground_truth, dp_syn)
+    print("Jaccard2 score:", total, avg_score, inverse_jaccard)
+    scores['jaccard2'] = [total, avg_score, inverse_jaccard]
+    update_str += '  &' + str(round(scores['jaccard'][-1], 4))
+    print("==" * 20)
+
     # compute AEMD for 7 different marginals
     for m, metric in AEMD_metrics.items():
         problem = metric(args.Delta)
