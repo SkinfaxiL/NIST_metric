@@ -1,15 +1,12 @@
+'''
+    This part follows the algorithm designed by Trung Dang (@kuroni)
+'''
+
 from .Base import Base
-import pandas as pd
-import os
 import numpy as np
-from cvxopt import matrix, solvers, spmatrix
 from datetime import datetime
-from cvxpy import *
-from scipy.sparse import csr_matrix
 from ortools.graph import pywrapgraph
 from fractions import Fraction
-import math
-
 
 class Event1way_month(Base):
     def __init__(self, Delta, alpha=1):
@@ -89,7 +86,7 @@ class Event1way_month(Base):
         for i in range(num_flow_variables):
             min_cost_flow.SetNodeSupply(i, -round(node_demands[i] * capacity_scale))
             # print(i, round(node_demands[i] * capacity_scale))
-
+        print(min_cost_flow.Solve(), min_cost_flow.OPTIMAL)
         assert (min_cost_flow.Solve() == min_cost_flow.OPTIMAL)
         problem_value += min_cost_flow.OptimalCost()
         problem_value = problem_value / capacity_scale / cost_scale

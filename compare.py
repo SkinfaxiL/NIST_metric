@@ -7,6 +7,8 @@ from problem_spec.Event1way_neighbor import Event1way_neighbor
 from problem_spec.Event1way_incident_type import Event1way_incident_type
 from problem_spec.piechart_metric import Deid2Metric
 from problem_spec.range_query import RangeQuery
+from problem_spec.Jaccard import Jaccard
+from problem_spec.Jaccard2 import Jaccard2
 import argparse
 import pandas as pd
 import pickle
@@ -18,7 +20,8 @@ import json
 
 ground_truth_file = './data/Event/ground_truth.csv'
 read_cols = ["neighborhood", "month"] + [str(i) for i in range(174)]
-AEMD_metrics = {'1-way(month)': Event1way_month,
+AEMD_metrics = {
+                '1-way(month)': Event1way_month,
                 '1-way(neighbor)': Event1way_neighbor,
                 '1-way(incident)': Event1way_incident_type,
                 '2-way(month-incident)': Event2way_month_incident,
@@ -43,6 +46,7 @@ def save_json(result, file_name, results_dir='./result'):
         json.dump(result, f, indent=2)
 
 def main():
+    update_str = ''
     # load truth data and private data
     ground_truth = load_data(ground_truth_file)
     dp_syn = load_data(args.dp_data, args.is_dp_data_pickle, deepcopy(ground_truth))
@@ -53,17 +57,38 @@ def main():
     pie_chart_scorer = Deid2Metric()
     pie_chart_overall_score, row_scores = pie_chart_scorer.score(ground_truth.values, dp_syn.values,
                                                                  return_individual_scores=True)
+    reversed_score = np.sum(1 - row_scores) / ground_truth.values.shape[0]
     normalized_score = pie_chart_scorer.normalized_by_row(pie_chart_overall_score, ground_truth.values)
-    print("pie chart score:", pie_chart_overall_score)
-    scores['pie_chart'] = [pie_chart_overall_score, normalized_score]
+    print("pie chart score:", pie_chart_overall_score, normalized_score, reversed_score)
+    scores['pie_chart'] = [pie_chart_overall_score, normalized_score, reversed_score]
+    update_str += '  &' + str(round(scores['pie_chart'][-1], 4))
     print("==" * 20)
-    # compute pie chart score
+
+    # compute rang query score
     rq_scorer = RangeQuery()
     raw_scores, relative_score = rq_scorer.score(ground_truth, dp_syn, month_range=4,
                                  neighborhood_range=int(278*0.3), incident_types_range=int(174*0.3))
     print("range query score:", raw_scores, relative_score)
     scores['range_query'] = [raw_scores, relative_score]
+    update_str += '  &' + str(round(scores['range_query'][-1], 4))
     print("==" * 20)
+
+    # compute jaccard score
+    jaccard_scorer = Jaccard()
+    total, avg_score, inverse_jaccard = jaccard_scorer.score(ground_truth, dp_syn)
+    print("Jaccard score:", total, avg_score, inverse_jaccard)
+    scores['jaccard'] = [total, avg_score, inverse_jaccard]
+    update_str += '  &' + str(round(scores['jaccard'][-1], 4))
+    print("==" * 20)
+
+    # compute jaccard score 2
+    jaccard_scorer2 = Jaccard2()
+    total, avg_score, inverse_jaccard = jaccard_scorer2.score(ground_truth, dp_syn)
+    print("Jaccard2 score:", total, avg_score, inverse_jaccard)
+    scores['jaccard2'] = [total, avg_score, inverse_jaccard]
+    update_str += '  &' + str(round(scores['jaccard'][-1], 4))
+    print("==" * 20)
+
     # compute AEMD for 7 different marginals
     for m, metric in AEMD_metrics.items():
         problem = metric(args.Delta)
@@ -71,8 +96,10 @@ def main():
         normalized_score = problem.normalize(score, ground_truth)
         print('---->', m, score, normalized_score)
         scores[m] = [score, normalized_score]
+        update_str += '  &' + str(round(scores[m][-1], 4))
         print("=="*20)
 
+    scores['update_str'] = update_str
     save_json(scores, 'all_scores_Delta=' + str(args.Delta) + '_' + os.path.split(args.dp_data)[-1] + '.json')
 
 

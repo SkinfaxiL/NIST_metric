@@ -1,14 +1,12 @@
+'''
+    This part follows the algorithm designed by Trung Dang (@kuroni)
+'''
+
 from .Base import Base
-import pandas as pd
-import os
 import numpy as np
-from cvxopt import matrix, solvers, spmatrix
 from datetime import datetime
-from cvxpy import *
-from scipy.sparse import csr_matrix
 from ortools.graph import pywrapgraph
 from fractions import Fraction
-import math
 
 
 class Event2way_month_neighbor(Base):
@@ -67,13 +65,13 @@ class Event2way_month_neighbor(Base):
             month = i // num_neighbor
             add_edge(i, i + total_cells, -inf, inf, 0)
             if month < 11:
-                add_edge(i, i + total_cells + num_neighbor, 0, inf, 1)
+                add_edge(i, i + total_cells + num_neighbor, 0, inf, 1 * 0.5)
             if month > 0:
-                add_edge(i, i + total_cells - num_neighbor, 0, inf, 1)
+                add_edge(i, i + total_cells - num_neighbor, 0, inf, 1 * 0.5)
             add_edge(source, i + total_cells, 0, inf, alpha)
             add_edge(i + total_cells, sink, 0, inf, alpha)
-            add_edge(i, dummy + month, 0, inf, 0.5)
-            add_edge(dummy + month, i, 0, inf, 0.5)
+            add_edge(i, dummy + month, 0, inf, 0.5 * 0.5)
+            add_edge(dummy + month, i, 0, inf, 0.5 * 0.5)
 
         # add data
         truth_data = ground_truth.values.astype('float')

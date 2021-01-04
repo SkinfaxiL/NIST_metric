@@ -1,14 +1,12 @@
+'''
+    This part follows the algorithm designed by Trung Dang (@kuroni)
+'''
+
 from .Base import Base
-import pandas as pd
-import os
 import numpy as np
-from cvxopt import matrix, solvers, spmatrix
 from datetime import datetime
-from cvxpy import *
-from scipy.sparse import csr_matrix
 from ortools.graph import pywrapgraph
 from fractions import Fraction
-import math
 
 
 class Event2way_neighbor_incident(Base):
@@ -67,10 +65,10 @@ class Event2way_neighbor_incident(Base):
             add_edge(i, i + total_cells, -inf, inf, 0)
             add_edge(source, i + total_cells, 0, inf, alpha)
             add_edge(i + total_cells, sink, 0, inf, alpha)
-            add_edge(i, incident_dummy + neighborhood, 0, inf, 0.5)
-            add_edge(incident_dummy + neighborhood, i, 0, inf, 0.5)
-            add_edge(i, neighborhood_dummy + incident_type, 0, inf, 0.5)
-            add_edge(neighborhood_dummy + incident_type, i, 0, inf, 0.5)
+            add_edge(i, incident_dummy + neighborhood, 0, inf, 0.5 * 0.5)
+            add_edge(incident_dummy + neighborhood, i, 0, inf, 0.5 * 0.5)
+            add_edge(i, neighborhood_dummy + incident_type, 0, inf, 0.5 * 0.5)
+            add_edge(neighborhood_dummy + incident_type, i, 0, inf, 0.5 * 0.5)
 
         # add data
         truth_data = ground_truth.values.astype('float')

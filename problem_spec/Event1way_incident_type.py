@@ -1,14 +1,12 @@
+'''
+    This part follows the algorithm designed by Trung Dang (@kuroni)
+'''
+
 from .Base import Base
-import pandas as pd
-import os
 import numpy as np
-from cvxopt import matrix, solvers, spmatrix
 from datetime import datetime
-from cvxpy import *
-from scipy.sparse import csr_matrix
 from ortools.graph import pywrapgraph
 from fractions import Fraction
-import math
 
 
 class Event1way_incident_type(Base):

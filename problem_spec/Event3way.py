@@ -1,3 +1,6 @@
+'''
+    This algorithm is desgined and implemented by Trung Dang (@kuroni)
+'''
 from .Base import Base
 import numpy as np
 from datetime import datetime
@@ -57,15 +60,15 @@ class Event3way(Base):
             month = (i - neighborhood * num_incident_type * 12) // num_incident_type
             incident_type = i - neighborhood * num_incident_type * 12 - month * num_incident_type
             if month < 11:
-                add_edge(i, i + num_incident_type, 0, inf, 1)
+                add_edge(i, i + num_incident_type, 0, inf, 1 * 0.33)
             if month > 0:
-                add_edge(i, i - num_incident_type, 0, inf, 1)
+                add_edge(i, i - num_incident_type, 0, inf, 1 * 0.33)
             add_edge(source, i, 0, inf, alpha)
             add_edge(i, sink, 0, inf, alpha)
-            add_edge(i, incident_dummy + neighborhood * 12 + month, 0, inf, 0.5)
-            add_edge(incident_dummy + neighborhood * 12 + month, i, 0, inf, 0.5)
-            add_edge(i, neighborhood_dummy + incident_type * 12 + month, 0, inf, 0.5)
-            add_edge(neighborhood_dummy + incident_type * 12 + month, i, 0, inf, 0.5)
+            add_edge(i, incident_dummy + neighborhood * 12 + month, 0, inf, 0.5 * 0.33)
+            add_edge(incident_dummy + neighborhood * 12 + month, i, 0, inf, 0.5 * 0.33)
+            add_edge(i, neighborhood_dummy + incident_type * 12 + month, 0, inf, 0.5 * 0.33)
+            add_edge(neighborhood_dummy + incident_type * 12 + month, i, 0, inf, 0.5 * 0.33)
 
         # add data
         truth_data = ground_truth.values.astype('float')
