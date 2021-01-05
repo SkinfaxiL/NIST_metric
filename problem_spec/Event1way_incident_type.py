@@ -15,13 +15,13 @@ class Event1way_incident_type(Base):
         self.Delta = Delta
         self.alpha = alpha
 
-    def _to_1way_marginal(self, ground_truth, dp_data):
-        ground_truth = ground_truth.sum(axis=0)
-        dp_data = dp_data.sum(axis=0)
-        return ground_truth, dp_data
+    def _to_1way_marginal(self, P, Q):
+        P = P.sum(axis=0)
+        Q = Q.sum(axis=0)
+        return P, Q
 
-    def compute_AEMC(self, ground_truth, dp_data):
-        ground_truth, dp_data = self._to_1way_marginal(ground_truth, dp_data)
+    def compute_AEMC(self, P, Q):
+        P, Q = self._to_1way_marginal(P, Q)
         num_incident_type = 174
         total_cells = num_incident_type
         num_flow_variables = total_cells * 2 + 2 + 1 # source, sink, dummy
@@ -66,14 +66,14 @@ class Event1way_incident_type(Base):
             add_edge(dummy, i, 0, inf, 0.5)
 
         # add data
-        truth_data = ground_truth.values.astype('float')
-        dp_data = dp_data.values.astype('float')
-        print("max diff of columns", np.max(np.abs(np.sum(truth_data, axis=0) - np.sum(dp_data, axis=0))))
-        truth_data = truth_data.flatten()
-        dp_data = dp_data.flatten()
+        P = P.values.astype('float')
+        Q = Q.values.astype('float')
+        print("max diff of columns", np.max(np.abs(np.sum(P, axis=0) - np.sum(Q, axis=0))))
+        P = P.flatten()
+        Q = Q.flatten()
         for i in range(total_cells):
-            add_edge(source, i, truth_data[i], truth_data[i], 0)
-            add_edge(i + total_cells, sink, dp_data[i] - Delta, dp_data[i] + Delta, 0)
+            add_edge(source, i, P[i], P[i], 0)
+            add_edge(i + total_cells, sink, Q[i] - Delta, Q[i] + Delta, 0)
 
         problem_value = round(problem_value * cost_scale * capacity_scale)
 
@@ -91,8 +91,8 @@ class Event1way_incident_type(Base):
         problem_value += min_cost_flow.OptimalCost()
         problem_value = problem_value / capacity_scale / cost_scale
 
-        abs_diff = np.sum(np.abs(truth_data - dp_data))
-        print("abs diff v.s. AEMD:", abs_diff, problem_value)
+        # abs_diff = np.sum(np.abs(truth_data - dp_data))
+        # print("abs diff v.s. AEMD:", abs_diff, problem_value)
         print("total_time:", datetime.now() - start_t)
         print("===============")
         return problem_value

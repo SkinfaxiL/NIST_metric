@@ -27,7 +27,7 @@ nohup python3 compare.py --dp_data ./data/event_dpsyn/2019-dpsyn-1.0-2.pkl --is_
 nohup python3 compare.py --dp_data ./data/event_dpsyn/2019-dpsyn-2.0-2.pkl --is_dp_data_pickle True &
 nohup python3 compare.py --dp_data ./data/event_dpsyn/2019-dpsyn-4.0-2.pkl --is_dp_data_pickle True &
 nohup python3 compare.py --dp_data ./data/event_dpsyn/2019-dpsyn-10.0-9.pkl --is_dp_data_pickle True &
-nohup python3 compare.py --dp_data ./data/event_dpsyn/2019-dpsyn-100-20.pkl --is_dp_data_pickle True &
+#nohup python3 compare.py --dp_data ./data/event_dpsyn/2019-dpsyn-100-20.pkl --is_dp_data_pickle True &
 
 # sprint1 sampled
 nohup python3 compare.py --dp_data ./data/sprint1/0.01_sampling.csv &

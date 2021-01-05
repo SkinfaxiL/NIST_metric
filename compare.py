@@ -76,7 +76,7 @@ def main():
     # compute AEMD for 7 different marginals
     for m, metric in AEMD_metrics.items():
         problem = metric(args.Delta)
-        score = problem.compute_AEMC(ground_truth, dp_syn)
+        score = problem.compute_AEMC(dp_syn, ground_truth)
         normalized_score = problem.normalize(score, ground_truth)
         print('---->', m, score, normalized_score)
         scores[m] = [score, normalized_score]

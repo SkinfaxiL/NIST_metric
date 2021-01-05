@@ -1,5 +1,6 @@
 result/*
 figures/*
+result_old/*
 #data/sprint1/*
 data/Demographic/*
 deid2-s1progressive/
@@ -9,6 +10,7 @@ problem_spec/Jaccard2.py
 delta_plot.py
 compare_delta.sh
 compare_script.sh
+compare2.py
 main.py
 scatter_plot.py
 okada_ieeepami06_emdl1.pdf

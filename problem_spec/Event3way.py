@@ -15,7 +15,7 @@ class Event3way(Base):
         self.alpha = alpha
 
 
-    def compute_AEMC(self, ground_truth, dp_data):
+    def compute_AEMC(self, P, Q):
         num_incident_type = 174
         num_neighborhood_type = 278
         total_cells = num_incident_type * num_neighborhood_type * 12
@@ -71,14 +71,14 @@ class Event3way(Base):
             add_edge(neighborhood_dummy + incident_type * 12 + month, i, 0, inf, 0.5 * 0.33)
 
         # add data
-        truth_data = ground_truth.values.astype('float')
-        dp_data = dp_data.values.astype('float')
-        print("max diff of columns", np.max(np.abs(np.sum(truth_data, axis=0) - np.sum(dp_data, axis=0))) )
-        truth_data = truth_data.flatten()
-        dp_data = dp_data.flatten()
+        P = P.values.astype('float')
+        Q = Q.values.astype('float')
+        print("max diff of columns", np.max(np.abs(np.sum(P, axis=0) - np.sum(Q, axis=0))) )
+        P = P.flatten()
+        Q = Q.flatten()
         for i in range(total_cells):
-            add_edge(source, i, truth_data[i], truth_data[i], 0)
-            add_edge(i, sink, dp_data[i] - Delta, dp_data[i] + Delta, 0)
+            add_edge(source, i, P[i], P[i], 0)
+            add_edge(i, sink, Q[i] - Delta, Q[i] + Delta, 0)
 
         problem_value = round(problem_value * cost_scale * capacity_scale)
 
@@ -93,7 +93,7 @@ class Event3way(Base):
         assert(min_cost_flow.Solve() == min_cost_flow.OPTIMAL)
         problem_value += min_cost_flow.OptimalCost()
         problem_value = problem_value / capacity_scale / cost_scale
-        abs_diff = np.sum(np.abs(truth_data - dp_data))
+        abs_diff = np.sum(np.abs(P - Q))
         print("abs diff v.s. AEMD:", abs_diff, problem_value)
         # total_loss += problem_value
         # solved.append({'loss': problem_value})
