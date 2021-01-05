@@ -7,8 +7,6 @@ from problem_spec.Event1way_neighbor import Event1way_neighbor
 from problem_spec.Event1way_incident_type import Event1way_incident_type
 from problem_spec.piechart_metric import Deid2Metric
 from problem_spec.range_query import RangeQuery
-from problem_spec.Jaccard import Jaccard
-from problem_spec.Jaccard2 import Jaccard2
 import argparse
 import pandas as pd
 import pickle

@@ -7,6 +7,8 @@ deid2-s1progressive/
 problem_spec/EventAnalysis.py
 problem_spec/Jaccard.py
 problem_spec/Jaccard2.py
+problem_spec/Event2wayLP_month_incident.py
+problem_spec/Event2wayLP_month_incident2.py
 delta_plot.py
 compare_delta.sh
 compare_script.sh
@@ -15,3 +17,4 @@ main.py
 scatter_plot.py
 okada_ieeepami06_emdl1.pdf
 figures.pptx
+PieChartMetric.pdf
